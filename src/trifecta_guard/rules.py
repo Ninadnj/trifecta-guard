@@ -77,8 +77,8 @@ RULES: tuple[Rule, ...] = (
             rf"(?:of\s+)?(?:the\s+|your\s+|my\s+|these\s+|those\s+)?(?:{_PREV}\s+)(?:\w+\s+)?{_INSTR}"),
          "Asks the model to discard its earlier instructions."),
     Rule("override.ignore_above", "override", 0.9,
-         _r(rf"\b(?:ignore|disregard|forget)\s+(?:all\s+|everything\s+)?(?:the\s+)?(?:above|before|that came before)\b"
-            rf"(?!\s+(?:section|step|paragraph|chapter|example|code|note))"),
+         _r(r"\b(?:ignore|disregard|forget)\s+(?:all\s+|everything\s+)?(?:the\s+)?(?:above|before|that came before)\b"
+            r"(?!\s+(?:section|step|paragraph|chapter|example|code|note))"),
          "Asks the model to discard everything above."),
     Rule("override.forget_everything", "override", 1.0,
          _r(r"\bforget\s+(?:everything|all)\s+(?:you\s+(?:were|have\s+been|'ve\s+been)\s+(?:told|given|instructed|asked)|"

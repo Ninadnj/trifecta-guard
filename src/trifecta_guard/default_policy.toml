@@ -1,0 +1,75 @@
+# trifecta-guard default policy.
+#
+# Copy to `.trifecta-guard.toml` in your project (or pass --policy) and edit. Unset keys fall
+# back to these defaults. Tool-name patterns use shell globs (fnmatch, case-sensitive).
+# MCP tools are named `mcp__<server>__<tool>` (Claude Code convention; the proxy uses the same).
+
+[detector]
+threshold = 1.0                 # heuristic score at which output is treated as an injection
+
+[output]
+on_injection = "redact"         # redact | quarantine | warn
+spotlight = false               # wrap all untrusted output in <untrusted-content> boundaries
+strip_invisible = true          # always remove tag / zero-width / bidi characters from untrusted output
+defang_images = true            # neutralise markdown images whose URL carries data
+image_allow_hosts = []          # hosts whose images are never defanged
+
+[tools]
+# Output from these tools is untrusted (written by someone other than the user).
+untrusted = [
+  "WebFetch", "WebSearch",
+  "mcp__*",                     # MCP servers mostly return third-party content; narrow this if you trust some
+]
+# Output from these tools is private (worth protecting from exfiltration).
+private = [
+  "mcp__*mail*", "mcp__*gmail*", "mcp__*drive*", "mcp__*docs*", "mcp__*notion*",
+  "mcp__*slack*", "mcp__*calendar*", "mcp__*1password*", "mcp__*vault*", "mcp__*secret*",
+  "mcp__*postgres*", "mcp__*sql*", "mcp__*db*", "mcp__*supabase*",
+]
+# Calls to these tools can move data off the machine.
+egress = [
+  "WebFetch",
+  "mcp__*send*", "mcp__*post*", "mcp__*create*", "mcp__*upload*", "mcp__*reply*",
+  "mcp__*comment*", "mcp__*message*", "mcp__*publish*", "mcp__*share*", "mcp__*forward*",
+  "mcp__*email*", "mcp__*http*", "mcp__*request*", "mcp__*webhook*", "mcp__*push*",
+  "mcp__*fetch*", "mcp__*navigate*", "mcp__*browse*", "mcp__*tweet*", "mcp__*invite*",
+]
+# Never treated as untrusted / private / egress, even if a pattern above matches.
+trusted = []
+
+[paths]
+# Files whose contents are private (Read tool, and shell commands that mention them).
+private = [
+  "*/.env", "*/.env.*", "*/.ssh/*", "*/.aws/*", "*/.config/gh/*", "*.pem", "*.key", "*.p12",
+  "*credentials*", "*secret*", "*/.netrc", "*/.npmrc", "*/.pypirc", "*id_rsa*", "*id_ed25519*",
+  "*password*", "*/.git-credentials", "*/.docker/config.json", "*/.kube/config", "*.kdbx",
+]
+# Files whose contents are untrusted (e.g. vendored or downloaded material).
+untrusted = []
+# Writes to these paths are gated: they persist across sessions or control the agent itself.
+protected = [
+  "*/.claude/settings*.json", "*/.claude/hooks/*", "*/.trifecta-guard.toml", "*/.git/hooks/*",
+  "*/.github/workflows/*", "*/.bashrc", "*/.zshrc", "*/.profile", "*/.bash_profile",
+  "*/authorized_keys", "*/.mcp.json", "*/claude_desktop_config.json", "*/.cursor/mcp.json",
+]
+
+[hosts]
+# Destinations that are always fine to send data to (exact host or parent domain).
+allow = []
+
+[gate]
+# What to do with a call, by session state. Values: allow | ask | deny.
+# A session is *tainted* once it has read untrusted content, *compromised* once that content
+# was flagged as an injection.
+compromised_egress = "ask"          # any egress call after an injection was seen
+compromised_private_egress = "deny" # ...that carries private data or a credential
+tainted_private_egress = "deny"     # egress carrying private data/credentials after reading untrusted content
+tainted_new_destination = "ask"     # sending data to a host first seen in untrusted content
+clean_secret_egress = "allow"       # a credential leaves in a session that never read untrusted content
+tainted_remote_exec = "ask"         # download-and-execute (curl | sh, pip install <url>) after reading untrusted content
+protected_write = "ask"             # writing agent/shell config, git hooks, CI workflows
+ask_fallback = "deny"               # where no human can answer (MCP proxy), 'ask' becomes this
+
+[runtime]
+fail_mode = "ask"                   # if the guard itself errors: ask | deny | allow
+audit = true                        # append decisions to the audit log (no payloads, no secrets)
