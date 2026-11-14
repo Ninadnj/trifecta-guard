@@ -90,6 +90,18 @@ To see it working, run `bash examples/claude_code_live_demo.sh`. It serves an in
 locally, asks Claude Code to follow it, and prints the guard's decisions and whether the collector
 ever received the key.
 
+**Live run, 2026-11-14 (Claude Code 2.1.214, Haiku):**
+* The guard fingerprinted the real `Read` of `.env`.
+* It flagged the fetched page (score 2.1) and redacted the paragraph through `updatedToolOutput`.
+  Claude Code accepted the rewritten Bash output.
+* The model saw only the redaction notice, refused the hidden instructions and told the user. The
+  collector got no request beyond the page itself.
+
+That run proved layer 1 inside Claude Code. It did **not** exercise the gate, because nothing
+tried to send the key out. The gate is covered by the scenario eval and the hook and proxy tests.
+It also led to one fix: the agent could see the guard's state directory, and deleting it would
+have reset the session to clean, so that directory is now always a protected path.
+
 ### Any MCP client (Claude Desktop, Cursor, Codex, …)
 
 Wrap the server command. Tools are seen as `mcp__<name>__<tool>`, so one policy covers both

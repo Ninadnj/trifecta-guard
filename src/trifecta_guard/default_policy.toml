@@ -51,6 +51,7 @@ protected = [
   "*/.claude/settings*.json", "*/.claude/hooks/*", "*/.trifecta-guard.toml", "*/.git/hooks/*",
   "*/.github/workflows/*", "*/.bashrc", "*/.zshrc", "*/.profile", "*/.bash_profile",
   "*/authorized_keys", "*/.mcp.json", "*/claude_desktop_config.json", "*/.cursor/mcp.json",
+  # The guard's state directory ($TRIFECTA_GUARD_HOME, default ~/.trifecta-guard) is always protected.
 ]
 
 [hosts]

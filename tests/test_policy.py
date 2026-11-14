@@ -84,3 +84,17 @@ def test_invalid_values_rejected():
         Policy.from_dict({"gate": {"compromised_egress": "maybe"}})
     with pytest.raises(ValueError):
         Policy.from_dict({"output": {"on_injection": "explode"}})
+
+
+def test_guard_state_dir_is_protected(isolated_home, monkeypatch, tmp_path):
+    """Found in the live Claude Code run: the agent could see (and so could delete) the guard's
+    session files, and a deleted session reads as clean."""
+    sessions = isolated_home / "sessions"
+    sessions.mkdir(parents=True)
+    assert P.classify("Bash", {"command": f"rm -rf {sessions}"}).protected_write
+    assert P.classify("Bash", {"command": f"rm {sessions}/*.json"}).protected_write
+    assert P.classify("Write", {"file_path": str(sessions / "x.json"), "content": "{}"}).protected_write
+    monkeypatch.chdir(isolated_home.parent)
+    assert P.classify("Bash", {"command": f"rm -rf {isolated_home.name}"}).protected_write  # relative path
+    assert not P.classify("Bash", {"command": f"ls {sessions}"}).protected_write  # reading is fine
+    assert not P.classify("Bash", {"command": "rm -rf build/"}).protected_write

@@ -92,6 +92,8 @@ class Policy:
         return any(fnmatch.fnmatchcase(name, p) for p in patterns)
 
     def path_is(self, kind: str, path: str) -> bool:
+        if kind == "protected" and in_guard_home(path):
+            return True  # the guard's own state: deleting it would reset a session to clean
         p = os.path.expanduser(path).replace("\\", "/")
         if not p.startswith("/"):
             p = "/" + p
@@ -141,11 +143,27 @@ REMOTE_EXEC = re.compile(
 )
 _ENV_DUMP = re.compile(r"(?:^|[\s;&|])(?:printenv|env|set|export\s+-p)\s*(?:$|[;&|>])|security\s+find-(?:generic|internet)-password|"
                        r"\bgh\s+auth\s+token\b|\baws\s+configure\s+(?:get|export)", re.IGNORECASE)
-_WRITE_CMD = re.compile(r"(?:>>?|\btee\b|\bsed\s+-i|\bcp\b|\bmv\b|\bln\b|\bchmod\b|\bperl\s+-pi)", re.IGNORECASE)
+_WRITE_CMD = re.compile(r"(?:>>?|\btee\b|\bsed\s+-i|\bcp\b|\bmv\b|\bln\b|\bchmod\b|\bperl\s+-pi|\brm\b|\brmdir\b|"
+                        r"\bunlink\b|\btruncate\b|\bshred\b|-delete\b|Remove-Item)", re.IGNORECASE)
+_TOKEN = re.compile(r"[^\s'\"`;&|<>()]+")
 _PATHISH = re.compile(r"(?:~|\.{0,2})?/?[\w.@-]+(?:/[\w.@-]+)+|\.[\w.-]+")
 
 DEST_KEYS = {"url", "uri", "endpoint", "to", "recipient", "recipients", "cc", "bcc", "email", "channel",
              "webhook", "webhook_url", "host", "address", "target", "destination", "repo", "repository"}
+
+
+def in_guard_home(path: str) -> bool:
+    """True if ``path`` (absolute, ``~``-relative or relative to the cwd) is inside the guard's state dir."""
+    from .state import default_home
+
+    if not path or path.startswith("-"):
+        return False
+    try:
+        home = os.path.realpath(default_home())
+        target = os.path.realpath(os.path.expanduser(path.rstrip("*").rstrip("/") or "/"))
+    except (OSError, ValueError):
+        return False
+    return target == home or target.startswith(home + os.sep)
 
 
 def string_leaves(obj: Any) -> list[str]:
@@ -247,7 +265,8 @@ def classify(policy: Policy, tool: str, args: dict) -> ToolRole:
         if role.egress and private_paths:
             role.sends_private_path = True
             role.notes.append(f"sends private file {private_paths[0]}")
-        if _WRITE_CMD.search(cmd) and any(policy.path_is("protected", p) for p in _PATHISH.findall(cmd)):
+        if _WRITE_CMD.search(cmd) and (any(policy.path_is("protected", p) for p in _PATHISH.findall(cmd))
+                                       or any(in_guard_home(t) for t in _TOKEN.findall(cmd))):
             role.protected_write = True
             role.notes.append("shell write to protected path")
         dests = hosts_in(cmd) | {m.lower() for m in _SCP_HOST.findall(cmd)} | {m.lower() for m in _SSH_HOST.findall(cmd)}
