@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "fetch": {
+      "command": "trifecta-guard",
+      "args": ["proxy", "--name", "fetch", "--session", "desktop", "--", "uvx", "mcp-server-fetch"]
+    },
+    "github": {
+      "command": "trifecta-guard",
+      "args": ["proxy", "--name", "github", "--session", "desktop", "--",
+               "npx", "-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "<your token>" }
+    }
+  }
+}
