@@ -1,6 +1,6 @@
 # trifecta-guard
 
-[![M8ven Score](https://m8ven.ai/badge/mcp/ninadnj/trifecta-guard)](https://m8ven.ai/mcp/ninadnj/trifecta-guard?s=readme)
+[![M8ven Verified](https://m8ven.ai/badge/mcp/ninadnj/trifecta-guard?variant=verified)](https://m8ven.ai/mcp/ninadnj/trifecta-guard?s=readme)
 
 **A prompt-injection firewall and taint gate for AI agents.** It drops into Claude Code as hooks and
 in front of any MCP server as a stdio proxy. No model calls and no required dependencies, and it
